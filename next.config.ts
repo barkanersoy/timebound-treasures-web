@@ -6,6 +6,14 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "i.ebayimg.com", pathname: "/**" },
     ],
   },
+  turbopack: {
+    rules: {
+      "*.css": {
+        loaders: ["@tailwindcss/turbopack"],
+        as: "*.css",
+      },
+    },
+  },
 };
 
 export default nextConfig;
