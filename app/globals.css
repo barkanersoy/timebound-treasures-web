@@ -8,9 +8,9 @@
   --card: #1e293b;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+@theme {
+  --color-background: #0f172a;
+  --color-foreground: #f8fafc;
   --color-navy: #0f172a;
   --color-navy-deep: #020617;
   --color-gold: #f59e0b;
