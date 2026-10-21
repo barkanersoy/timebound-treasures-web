@@ -36,12 +36,12 @@ const CONDITIONS: Array<{ value: Condition; label: string; hint: string }> = [
 ];
 
 const PACKAGING: Array<{ value: Packaging; label: string; hint: string }> = [
-  { value: "loose", label: "Loose Coin", hint: "No box — 20% margin, 80% of melt" },
-  { value: "box", label: "Box Only", hint: "Original case — 15% margin, 85% of melt" },
+  { value: "loose", label: "Loose Coin", hint: "No original box or papers" },
+  { value: "box", label: "Box Only", hint: "Original case, no certificate" },
   {
     value: "box-papers",
     label: "Box & Papers / CoA",
-    hint: "Full packaging — 15% margin, or 10% in mint state",
+    hint: "Original case with certificate of authenticity",
   },
 ];
 
