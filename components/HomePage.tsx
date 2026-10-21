@@ -7,7 +7,7 @@ import { Footer } from "@/components/Footer";
 import { Header, type MainTab, type SectionId } from "@/components/Header";
 import { Hero } from "@/components/Hero";
 import { KnowledgeBase } from "@/components/KnowledgeBase";
-import { ValuationWizard } from "@/components/ValuationWizard";
+import { QuoteBuilder } from "@/components/QuoteBuilder";
 import { ValueProps } from "@/components/ValueProps";
 import type { SpotPrices } from "@/lib/valuation";
 
@@ -82,7 +82,9 @@ export function HomePage() {
               aria-labelledby="tab-sell"
               hidden={tab !== "sell"}
             >
-              {tab === "sell" ? <ValuationWizard spot={spot} /> : null}
+              {tab === "sell" ? (
+                <QuoteBuilder initialSilverSpotGBP={spot?.silverGbp ?? null} />
+              ) : null}
             </div>
             <div id="shop" role="tabpanel" aria-labelledby="tab-buy" hidden={tab !== "buy"}>
               {tab === "buy" ? <EbayGallery /> : null}
