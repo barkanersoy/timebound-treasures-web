@@ -113,7 +113,7 @@ export function EbayGallery() {
           <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-slate-300">
             {feed.configured
               ? "When new coins go up on eBay UK they will appear here automatically."
-              : "Your eBay developer app is still pending approval. Once you add the production Client ID and Cert ID, this grid will show the latest 12 listings from timeboundtreasures."}
+              : "Add your production App ID and Cert ID to .env.local, then restart the dev server. This grid will show the latest 12 listings from timeboundtreasures."}
           </p>
           {feed.error && feed.configured ? (
             <p className="mt-3 text-xs text-amber-200">{feed.error}</p>
