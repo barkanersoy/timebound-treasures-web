@@ -23,7 +23,7 @@ export function ValueProps() {
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">Why sell to us?</p>
         <h2 id="why-heading" className="mt-2 max-w-2xl font-serif text-3xl leading-tight text-white sm:text-4xl">
-          A fair, transparent way to sell your collection.
+          A Fair, Transparent Way To Sell Your Collection
         </h2>
         <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
           We eliminate retail markup and auction house fees by running a lean, independent

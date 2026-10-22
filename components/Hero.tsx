@@ -24,12 +24,12 @@ export function Hero({ onNavigate, spot }: HeroProps) {
       <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[1.15fr_0.85fr] lg:py-24">
         <div>
           <p className="mb-5 inline-flex rounded-full border border-gold/25 bg-gold/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-gold">
-            Independent numismatists · {SITE.location}
+            Independent Coin Dealers · London
           </p>
           <h1 className="max-w-xl font-serif text-[2.05rem] leading-[1.18] tracking-[-0.018em] text-white sm:max-w-2xl sm:text-[2.75rem] sm:leading-[1.14] lg:max-w-none lg:text-[3.35rem] lg:leading-[1.12] lg:tracking-[-0.022em]">
-            Sell{" "}
+            Sell Your{" "}
             <span className="text-amber-400">Gold, Silver & Rare Coins</span>{" "}
-            directly to London’s Trusted Dealers.
+            Direct
           </h1>
           <p className="mt-5 max-w-xl text-[0.95rem] leading-7 text-slate-300 sm:text-lg sm:leading-8">
             Get fair, transparent valuations calculated against live market spot rates.
