@@ -17,32 +17,48 @@ function priceLabel(listing: EbayListing) {
 
 export function EbayGallery() {
   const [feed, setFeed] = useState<EbayFeed | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+
     fetch("/api/ebay", { cache: "no-store" })
-      .then((response) => response.json())
-      .then((payload: EbayFeed) => {
-        if (!cancelled) setFeed(payload);
+      .then(async (response) => {
+        const payload = (await response.json()) as EbayFeed;
+        if (!response.ok) {
+          throw new Error(payload.error ?? `Could not load listings (${response.status})`);
+        }
+        return payload;
       })
-      .catch(() => {
+      .then((payload) => {
+        if (!cancelled) {
+          setFeed(payload);
+          setLoading(false);
+        }
+      })
+      .catch((error: unknown) => {
         if (!cancelled) {
           setFeed({
-            configured: false,
+            configured: true,
             shopUrl: EBAY_SHOP_URL,
             seller: "timeboundtreasures",
             listings: [],
-            error: "Could not reach the eBay feed",
+            error: error instanceof Error ? error.message : "Could not reach the eBay feed",
           });
+          setLoading(false);
         }
       });
+
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadKey]);
 
   const shopUrl = feed?.shopUrl ?? EBAY_SHOP_URL;
   const listings = feed?.listings ?? [];
+  const showListings = listings.length > 0;
 
   return (
     <div>
@@ -65,9 +81,9 @@ export function EbayGallery() {
         </a>
       </div>
 
-      {!feed ? (
+      {loading && !showListings ? (
         <p className="mt-8 text-sm text-slate-400">Loading latest listings…</p>
-      ) : listings.length > 0 ? (
+      ) : showListings ? (
         <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {listings.map((listing) => (
             <li
@@ -108,24 +124,33 @@ export function EbayGallery() {
       ) : (
         <div className="mt-8 rounded-3xl border border-white/10 bg-card px-6 py-10 text-center">
           <p className="font-serif text-2xl text-white">
-            {feed.configured ? "No active listings right now" : "Live listings are ready to connect"}
+            {feed?.error ? "Couldn’t load live listings" : "No active listings right now"}
           </p>
           <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-slate-300">
-            {feed.configured
-              ? "When new coins go up on eBay UK they will appear here automatically."
-              : "Add your production App ID and Cert ID to .env.local, then restart the dev server. This grid will show the latest 6 listings from timeboundtreasures."}
+            {feed?.error
+              ? "The eBay feed didn’t respond. Retry, or browse the full shop while we reconnect."
+              : "When new coins go up on eBay UK they will appear here automatically."}
           </p>
-          {feed.error && feed.configured ? (
+          {feed?.error ? (
             <p className="mt-3 text-xs text-amber-200">{feed.error}</p>
           ) : null}
-          <a
-            href={shopUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-6 inline-flex items-center justify-center rounded-full bg-gold px-5 py-2.5 text-sm font-semibold text-navy hover:bg-gold-dark"
-          >
-            Browse timeboundtreasures on eBay
-          </a>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => setReloadKey((key) => key + 1)}
+              className="inline-flex items-center justify-center rounded-full border border-gold/50 px-5 py-2.5 text-sm font-semibold text-gold hover:bg-gold/10"
+            >
+              Retry live listings
+            </button>
+            <a
+              href={shopUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center rounded-full bg-gold px-5 py-2.5 text-sm font-semibold text-navy hover:bg-gold-dark"
+            >
+              Browse timeboundtreasures on eBay
+            </a>
+          </div>
         </div>
       )}
     </div>

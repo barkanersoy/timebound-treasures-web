@@ -81,16 +81,22 @@ export function HomePage() {
               role="tabpanel"
               aria-labelledby="tab-sell"
               hidden={tab !== "sell"}
+              className={tab !== "sell" ? "hidden" : undefined}
             >
-              {tab === "sell" ? (
-                <QuoteBuilder
-                  goldSpotGBP={spot?.goldGbp ?? null}
-                  silverSpotGBP={spot?.silverGbp ?? null}
-                />
-              ) : null}
+              <QuoteBuilder
+                goldSpotGBP={spot?.goldGbp ?? null}
+                silverSpotGBP={spot?.silverGbp ?? null}
+              />
             </div>
-            <div id="shop" role="tabpanel" aria-labelledby="tab-buy" hidden={tab !== "buy"}>
-              {tab === "buy" ? <EbayGallery /> : null}
+            <div
+              id="shop"
+              role="tabpanel"
+              aria-labelledby="tab-buy"
+              hidden={tab !== "buy"}
+              className={tab !== "buy" ? "hidden" : undefined}
+            >
+              {/* Keep mounted so eBay listings are not refetched away on every tab switch. */}
+              <EbayGallery />
             </div>
           </div>
         </section>
