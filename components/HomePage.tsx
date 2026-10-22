@@ -83,7 +83,10 @@ export function HomePage() {
               hidden={tab !== "sell"}
             >
               {tab === "sell" ? (
-                <QuoteBuilder initialSilverSpotGBP={spot?.silverGbp ?? null} />
+                <QuoteBuilder
+                  goldSpotGBP={spot?.goldGbp ?? null}
+                  silverSpotGBP={spot?.silverGbp ?? null}
+                />
               ) : null}
             </div>
             <div id="shop" role="tabpanel" aria-labelledby="tab-buy" hidden={tab !== "buy"}>

@@ -1,9 +1,16 @@
 import { SITE } from "@/lib/site";
 
+/**
+ * eBay data policy: never persist listing or user data.
+ * - No database, files, cookies, or localStorage for eBay payloads.
+ * - Listings are fetched live per request and returned only in the HTTP response.
+ * - The only in-memory value we keep is a short-lived OAuth access token for our
+ *   app credentials (not eBay end-user personal data).
+ */
 export const EBAY_SHOP_URL = SITE.ebayShop;
 export const EBAY_SELLER = SITE.ebaySeller;
 export const EBAY_MARKETPLACE = "EBAY_GB";
-export const EBAY_LISTING_LIMIT = 12;
+export const EBAY_LISTING_LIMIT = 6;
 
 export type EbayListing = {
   id: string;
@@ -25,10 +32,9 @@ export type EbayFeed = {
 };
 
 type TokenCache = { value: string; expiresAt: number };
-type ListingCache = { feed: EbayFeed; expiresAt: number };
 
-let tokenCache: TokenCache | null = null;
-let listingCache: ListingCache | null = null;
+/** Ephemeral app OAuth token only — never listing or user payloads. */
+let accessTokenCache: TokenCache | null = null;
 
 type BrowseItem = {
   itemId?: string;
@@ -61,8 +67,8 @@ async function getAccessToken(): Promise<string> {
   const keys = credentials();
   if (!keys) throw new Error("eBay API keys are not configured");
 
-  if (tokenCache && Date.now() < tokenCache.expiresAt) {
-    return tokenCache.value;
+  if (accessTokenCache && Date.now() < accessTokenCache.expiresAt) {
+    return accessTokenCache.value;
   }
 
   const basic = Buffer.from(`${keys.clientId}:${keys.clientSecret}`).toString("base64");
@@ -89,11 +95,11 @@ async function getAccessToken(): Promise<string> {
     throw new Error(payload.error_description ?? "eBay token request failed");
   }
 
-  tokenCache = {
+  accessTokenCache = {
     value: payload.access_token,
     expiresAt: Date.now() + Math.max(30, (payload.expires_in ?? 7200) - 60) * 1000,
   };
-  return tokenCache.value;
+  return accessTokenCache.value;
 }
 
 function mapItem(item: BrowseItem): EbayListing | null {
@@ -113,18 +119,16 @@ function mapItem(item: BrowseItem): EbayListing | null {
 }
 
 export async function getEbayListings(): Promise<EbayFeed> {
-  if (listingCache && Date.now() < listingCache.expiresAt) {
-    return listingCache.feed;
-  }
-
   if (!credentials()) {
     return emptyFeed();
   }
 
   try {
     const token = await getAccessToken();
+    // Browse API rejects ultra-broad queries like q=* even with a seller filter.
+    // Use a coin-focused keyword still scoped to our seller account.
     const params = new URLSearchParams({
-      q: "*",
+      q: "coin",
       limit: String(EBAY_LISTING_LIMIT),
       sort: "newlyListed",
       filter: `sellers:{${EBAY_SELLER}}`,
@@ -156,14 +160,13 @@ export async function getEbayListings(): Promise<EbayFeed> {
       .filter((item): item is EbayListing => item !== null)
       .slice(0, EBAY_LISTING_LIMIT);
 
-    const feed: EbayFeed = {
+    // Return live data only — do not cache listings on the server.
+    return {
       configured: true,
       shopUrl: EBAY_SHOP_URL,
       seller: EBAY_SELLER,
       listings,
     };
-    listingCache = { feed, expiresAt: Date.now() + 5 * 60 * 1000 };
-    return feed;
   } catch (error) {
     return emptyFeed(error instanceof Error ? error.message : "Could not load eBay listings");
   }

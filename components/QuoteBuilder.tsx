@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { formatGbp, formatNumber } from "@/lib/format";
 import type { EvaluatedCoin } from "@/lib/silver-quote";
 
@@ -54,7 +54,8 @@ const PACKAGING_LABEL: Record<Packaging, string> = {
 };
 
 type QuoteBuilderProps = {
-  initialSilverSpotGBP?: number | null;
+  goldSpotGBP?: number | null;
+  silverSpotGBP?: number | null;
 };
 
 function newLineId() {
@@ -65,10 +66,12 @@ function roundMoney(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
-export function QuoteBuilder({ initialSilverSpotGBP = null }: QuoteBuilderProps) {
-  const [silverSpotGBP, setSilverSpotGBP] = useState(
-    initialSilverSpotGBP && initialSilverSpotGBP > 0 ? initialSilverSpotGBP : 0,
-  );
+export function QuoteBuilder({
+  goldSpotGBP = null,
+  silverSpotGBP = null,
+}: QuoteBuilderProps) {
+  const goldGbp = goldSpotGBP && goldSpotGBP > 0 ? goldSpotGBP : null;
+  const silverGbp = silverSpotGBP && silverSpotGBP > 0 ? silverSpotGBP : null;
   const [description, setDescription] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [condition, setCondition] = useState<Condition>("circulated");
@@ -76,12 +79,6 @@ export function QuoteBuilder({ initialSilverSpotGBP = null }: QuoteBuilderProps)
   const [lines, setLines] = useState<QuoteLine[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (initialSilverSpotGBP && initialSilverSpotGBP > 0) {
-      setSilverSpotGBP(initialSilverSpotGBP);
-    }
-  }, [initialSilverSpotGBP]);
 
   const totals = useMemo(() => {
     const fullMelt = roundMoney(
@@ -102,8 +99,8 @@ export function QuoteBuilder({ initialSilverSpotGBP = null }: QuoteBuilderProps)
       setError("Enter a coin description first.");
       return;
     }
-    if (!(silverSpotGBP > 0)) {
-      setError("Enter a live silver spot price in £ per troy ounce.");
+    if (!(silverGbp && silverGbp > 0)) {
+      setError("Live silver spot is still loading. Please try again in a moment.");
       return;
     }
 
@@ -114,7 +111,7 @@ export function QuoteBuilder({ initialSilverSpotGBP = null }: QuoteBuilderProps)
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userInput: trimmed,
-          silverSpotGBP,
+          silverSpotGBP: silverGbp,
         }),
       });
       const payload = await response.json();
@@ -157,29 +154,34 @@ export function QuoteBuilder({ initialSilverSpotGBP = null }: QuoteBuilderProps)
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">
-            Silver Quote Engine
+            Coin Quote Engine
           </p>
           <h2 className="mt-2 font-serif text-3xl text-white sm:text-4xl">
-            Instant Silver Coin Valuation
+            Instant Coin Valuation
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-300">
             Describe each coin based on your knowledge. Specify year, what it is and where it is
             from.
           </p>
         </div>
-        <label className="block min-w-[12rem] text-sm">
-          <span className="mb-2 block font-medium text-slate-100">Silver Spot (£/oz)</span>
-          <input
-            type="number"
-            inputMode="decimal"
-            min={0}
-            step="0.01"
-            value={silverSpotGBP || ""}
-            onChange={(event) => setSilverSpotGBP(Number(event.target.value) || 0)}
-            placeholder="e.g. 42.96"
-            className="w-full rounded-2xl border border-white/10 bg-navy/60 px-4 py-3 text-white outline-none ring-gold placeholder:text-slate-500 focus:ring-2"
-          />
-        </label>
+        <div className="grid min-w-[14rem] grid-cols-2 gap-3 sm:min-w-[18rem]">
+          <div className="rounded-2xl border border-white/10 bg-navy/60 px-4 py-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+              Gold Spot
+            </p>
+            <p className="mt-1 font-semibold text-gold">
+              {goldGbp ? `${formatGbp(goldGbp)}/oz` : "Loading…"}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-navy/60 px-4 py-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+              Silver Spot
+            </p>
+            <p className="mt-1 font-semibold text-gold">
+              {silverGbp ? `${formatGbp(silverGbp)}/oz` : "Loading…"}
+            </p>
+          </div>
+        </div>
       </div>
 
       <form onSubmit={addCoin} className="mt-8 space-y-6">

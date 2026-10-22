@@ -20,7 +20,7 @@ export function EbayGallery() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/ebay")
+    fetch("/api/ebay", { cache: "no-store" })
       .then((response) => response.json())
       .then((payload: EbayFeed) => {
         if (!cancelled) setFeed(payload);
@@ -48,11 +48,11 @@ export function EbayGallery() {
     <div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="font-serif text-3xl text-white">eBay shop gallery</h2>
+          <h2 className="font-serif text-3xl text-white">eBay Shop</h2>
           <p className="mt-2 max-w-2xl text-sm text-slate-300">
-            Live listings from{" "}
-            <span className="text-gold">timeboundtreasures</span> on eBay UK. Cards
-            open the real item in a new tab.
+            Recent Live listings from{" "}
+            <span className="text-gold">timeboundtreasures</span> on eBay UK. Click to
+            open the item in a new tab.
           </p>
         </div>
         <a
@@ -68,7 +68,7 @@ export function EbayGallery() {
       {!feed ? (
         <p className="mt-8 text-sm text-slate-400">Loading latest listings…</p>
       ) : listings.length > 0 ? (
-        <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {listings.map((listing) => (
             <li
               key={listing.id}
@@ -113,7 +113,7 @@ export function EbayGallery() {
           <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-slate-300">
             {feed.configured
               ? "When new coins go up on eBay UK they will appear here automatically."
-              : "Add your production App ID and Cert ID to .env.local, then restart the dev server. This grid will show the latest 12 listings from timeboundtreasures."}
+              : "Add your production App ID and Cert ID to .env.local, then restart the dev server. This grid will show the latest 6 listings from timeboundtreasures."}
           </p>
           {feed.error && feed.configured ? (
             <p className="mt-3 text-xs text-amber-200">{feed.error}</p>
