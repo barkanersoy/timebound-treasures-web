@@ -37,7 +37,7 @@ const CONDITIONS: Array<{ value: Condition; label: string; hint: string }> = [
 
 const PACKAGING: Array<{ value: Packaging; label: string; hint: string }> = [
   { value: "loose", label: "Loose Coin", hint: "No original box or papers" },
-  { value: "box", label: "Box Only", hint: "Original case, no certificate" },
+  { value: "box", label: "Box or Papers Only", hint: "Original case, no certificate" },
   {
     value: "box-papers",
     label: "Box & Papers / CoA",

@@ -353,7 +353,7 @@ export const CONDITION_LABEL: Record<Condition, string> = {
 
 export const PACKAGING_LABEL: Record<Packaging, string> = {
   loose: "Loose Coin",
-  box: "Box Only",
+  box: "Box or Papers Only",
   "box-papers": "Box & Papers / CoA",
 };
 

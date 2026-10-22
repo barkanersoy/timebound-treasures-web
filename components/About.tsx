@@ -34,7 +34,7 @@ export function About() {
           About Timebound Treasures
         </p>
         <h2 className="mt-2 max-w-2xl font-serif text-3xl text-white sm:text-4xl">
-          Independent Numismatic Specialists in West London
+          Independent Coin Dealers / Specialists in London
         </h2>
         <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-300 sm:text-base">
           Timebound Treasures is an independent numismatic practice founded by Barkan and
