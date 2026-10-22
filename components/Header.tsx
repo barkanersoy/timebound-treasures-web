@@ -40,7 +40,7 @@ export function Header({ onNavigate }: HeaderProps) {
           onClick={() => onNavigate("valuation", "sell")}
           className="flex items-center gap-3 text-left"
         >
-          <BrandLogo size={48} priority />
+          <BrandLogo size={53} priority />
           <span>
             <span className="block font-serif text-lg leading-tight text-white sm:text-xl">
               {SITE.name}

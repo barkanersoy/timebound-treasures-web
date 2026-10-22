@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import { SITE } from "@/lib/site";
 import type { MainTab, SectionId } from "@/components/Header";
+import { HeroStoryReel } from "@/components/HeroStoryReel";
 import { formatGbp } from "@/lib/format";
 import type { SpotPrices } from "@/lib/valuation";
 
@@ -85,16 +85,7 @@ export function Hero({ onNavigate, spot }: HeroProps) {
           ) : null}
         </div>
         <div className="relative">
-          <div className="overflow-hidden rounded-3xl border border-gold/20 shadow-2xl shadow-black/40">
-            <Image
-              src="/pouch.jpg"
-              alt="Navy Timebound Treasures pouch with gold, silver and historic coins"
-              width={1200}
-              height={800}
-              className="h-full w-full object-cover"
-              priority
-            />
-          </div>
+          <HeroStoryReel />
         </div>
       </div>
     </section>
