@@ -3,13 +3,13 @@ import Image from "next/image";
 const PEOPLE = [
   {
     name: "Barkan",
-    role: "Numismatic Specialist · Sales, Marketplaces & Consignments",
+    role: "Sales, Marketplaces & Consignments",
     image: "/barkan.jpg",
     copy: "Focuses on global marketplace liquidity, consignment management, and sales strategy across major numismatic platforms. Barkan manages client consignments on a clear commission basis, leveraging historical pricing data to maximize realization values without the hassle of managing individual listings.",
   },
   {
     name: "Tamer",
-    role: "Numismatic Specialist · Valuation, Purchasing & Grading",
+    role: "Valuation, Purchasing & Grading",
     image: "/tamer.jpg",
     copy: "Specialises in physical coin appraisal, metal purity verification, and direct acquisitions. Tamer evaluates British and American coinage against live bullion spot rates and numismatic market demand, providing clear, transparent buyout offers and instant payouts.",
   },
