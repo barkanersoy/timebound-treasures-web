@@ -187,7 +187,8 @@ function identifySilverLocally(description: string): SilverIdentity {
     identifiedName: "Unidentified coin — manual review",
     purityDecimal: 0,
     grossWeightGrams: 0,
-    notes: "Could not safely infer silver content from the description.",
+    notes:
+      "Could not safely infer gold or silver content from the description. Barkan & Tamer will appraise from your photos.",
   };
 }
 
@@ -196,13 +197,28 @@ function round(value: number, digits: number) {
   return Math.round((value + Number.EPSILON) * factor) / factor;
 }
 
+/** Standard gold types with fixed mint specs — skip AI/search for these. */
+const KNOWN_GOLD_IDS = new Set([
+  "sovereign",
+  "half-sovereign",
+  "quarter-sovereign",
+  "gold-britannia",
+  "krugerrand",
+  "gold-eagle",
+  "maple-gold",
+]);
+
 /** Gold coins matched by the shared identifier (sovereign, Krugerrand, etc.). */
 export function evaluateGoldLocally(
   userInput: string,
   goldSpotGBP: number,
 ): EvaluatedCoin | null {
   const identified = identifyCoin(userInput);
-  if (identified.metal !== "gold") return null;
+  // Only short-circuit known bullion types. Vague "gold coin" / obscure issues
+  // fall through to Gemini + Google Search when available.
+  if (identified.metal !== "gold" || !KNOWN_GOLD_IDS.has(identified.id)) {
+    return null;
+  }
 
   return finalizeEvaluatedCoin(
     {
@@ -237,8 +253,23 @@ export function evaluateCoinLocally(
   spots: { goldSpotGBP?: number; silverSpotGBP: number },
 ): EvaluatedCoin {
   if (spots.goldSpotGBP && spots.goldSpotGBP > 0) {
-    const gold = evaluateGoldLocally(userInput, spots.goldSpotGBP);
-    if (gold) return gold;
+    const knownGold = evaluateGoldLocally(userInput, spots.goldSpotGBP);
+    if (knownGold) return knownGold;
+
+    // AI unavailable: still price generic/obscure gold conservatively from identifyCoin.
+    const identified = identifyCoin(userInput);
+    if (identified.metal === "gold") {
+      return finalizeEvaluatedCoin(
+        {
+          identifiedName: identified.name,
+          metalType: "gold",
+          purityDecimal: identified.purity,
+          grossWeightGrams: identified.weightGrams,
+          notes: identified.notes,
+        },
+        spots.goldSpotGBP,
+      );
+    }
   }
   return evaluateSilverLocally(userInput, spots.silverSpotGBP);
 }
