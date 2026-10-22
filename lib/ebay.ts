@@ -120,7 +120,8 @@ function mapItem(item: BrowseItem): EbayListing | null {
 
 export async function getEbayListings(): Promise<EbayFeed> {
   if (!credentials()) {
-    return emptyFeed();
+    // Missing on the host (e.g. Netlify env) — not “no listings”.
+    return emptyFeed("eBay API keys are not configured on this server");
   }
 
   try {

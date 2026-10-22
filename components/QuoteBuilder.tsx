@@ -112,6 +112,7 @@ export function QuoteBuilder({
         body: JSON.stringify({
           userInput: trimmed,
           silverSpotGBP: silverGbp,
+          ...(goldGbp ? { goldSpotGBP: goldGbp } : {}),
         }),
       });
       const payload = await response.json();
@@ -296,7 +297,9 @@ export function QuoteBuilder({
                           <dd className="text-slate-200">{formatNumber(line.grossWeightGrams, 2)}g</dd>
                         </div>
                         <div>
-                          <dt className="text-slate-500">Fine silver / coin</dt>
+                          <dt className="text-slate-500">
+                            Fine {line.metalType === "gold" ? "gold" : "metal"} / coin
+                          </dt>
                           <dd className="text-slate-200">
                             {formatNumber(line.fineMetalOuncesPerCoin, 4)} oz
                           </dd>

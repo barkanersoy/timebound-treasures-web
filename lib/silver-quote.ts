@@ -1,17 +1,18 @@
 import { z } from "zod";
+import { identifyCoin } from "@/lib/valuation";
 
 export const TROY_OUNCE_GRAMS = 31.1034768;
 
 export const EvaluatedCoinSchema = z.object({
   identifiedName: z.string().describe("Recognised coin name, e.g. Pre-1947 Shilling"),
   metalType: z
-    .enum(["silver", "none"])
-    .describe("silver when bullion content exists; none for cupro-nickel or non-silver"),
+    .enum(["gold", "silver", "none"])
+    .describe("gold or silver when bullion content exists; none for base metal"),
   purityDecimal: z
     .number()
     .min(0)
     .max(1)
-    .describe("Fine silver fraction: 0.925, 0.5, or 0"),
+    .describe("Fine metal fraction: e.g. 0.9167 gold, 0.925/0.5 silver, or 0"),
   grossWeightGrams: z.number().nonnegative().describe("Standard coin weight in grams"),
   fineMetalGramsPerCoin: z.number().nonnegative(),
   fineMetalOuncesPerCoin: z.number().nonnegative(),
@@ -24,6 +25,7 @@ export type EvaluatedCoin = z.infer<typeof EvaluatedCoinSchema>;
 export const QuoteRequestSchema = z.object({
   userInput: z.string().min(1).max(500),
   silverSpotGBP: z.number().positive(),
+  goldSpotGBP: z.number().positive().optional(),
 });
 
 type SilverIdentity = {
@@ -194,25 +196,51 @@ function round(value: number, digits: number) {
   return Math.round((value + Number.EPSILON) * factor) / factor;
 }
 
+/** Gold coins matched by the shared identifier (sovereign, Krugerrand, etc.). */
+export function evaluateGoldLocally(
+  userInput: string,
+  goldSpotGBP: number,
+): EvaluatedCoin | null {
+  const identified = identifyCoin(userInput);
+  if (identified.metal !== "gold") return null;
+
+  return finalizeEvaluatedCoin(
+    {
+      identifiedName: identified.name,
+      metalType: "gold",
+      purityDecimal: identified.purity,
+      grossWeightGrams: identified.weightGrams,
+      notes: identified.notes,
+    },
+    goldSpotGBP,
+  );
+}
+
 /** Deterministic silver valuation used when Gemini is unavailable. */
 export function evaluateSilverLocally(userInput: string, silverSpotGBP: number): EvaluatedCoin {
   const identity = identifySilverLocally(userInput);
-  const purityDecimal = Math.min(1, Math.max(0, identity.purityDecimal));
-  const grossWeightGrams = Math.max(0, identity.grossWeightGrams);
-  const fineMetalGramsPerCoin = round(grossWeightGrams * purityDecimal, 6);
-  const fineMetalOuncesPerCoin = round(fineMetalGramsPerCoin / TROY_OUNCE_GRAMS, 8);
-  const rawMeltValuePerCoinGBP = round(fineMetalOuncesPerCoin * silverSpotGBP, 2);
+  return finalizeEvaluatedCoin(
+    {
+      identifiedName: identity.identifiedName,
+      metalType: identity.purityDecimal > 0 ? "silver" : "none",
+      purityDecimal: identity.purityDecimal,
+      grossWeightGrams: identity.grossWeightGrams,
+      notes: identity.notes,
+    },
+    silverSpotGBP,
+  );
+}
 
-  return {
-    identifiedName: identity.identifiedName,
-    metalType: purityDecimal > 0 ? "silver" : "none",
-    purityDecimal,
-    grossWeightGrams: round(grossWeightGrams, 4),
-    fineMetalGramsPerCoin,
-    fineMetalOuncesPerCoin,
-    rawMeltValuePerCoinGBP,
-    notes: identity.notes,
-  };
+/** Prefer gold rules, then silver rules — used when AI is unavailable. */
+export function evaluateCoinLocally(
+  userInput: string,
+  spots: { goldSpotGBP?: number; silverSpotGBP: number },
+): EvaluatedCoin {
+  if (spots.goldSpotGBP && spots.goldSpotGBP > 0) {
+    const gold = evaluateGoldLocally(userInput, spots.goldSpotGBP);
+    if (gold) return gold;
+  }
+  return evaluateSilverLocally(userInput, spots.silverSpotGBP);
 }
 
 export function finalizeEvaluatedCoin(
@@ -221,17 +249,19 @@ export function finalizeEvaluatedCoin(
     "identifiedName" | "purityDecimal" | "grossWeightGrams" | "notes"
   > &
     Partial<Pick<EvaluatedCoin, "metalType">>,
-  silverSpotGBP: number,
+  metalSpotGBP: number,
 ): EvaluatedCoin {
   const purityDecimal = Math.min(1, Math.max(0, partial.purityDecimal));
   const grossWeightGrams = Math.max(0, partial.grossWeightGrams);
   const fineMetalGramsPerCoin = round(grossWeightGrams * purityDecimal, 6);
   const fineMetalOuncesPerCoin = round(fineMetalGramsPerCoin / TROY_OUNCE_GRAMS, 8);
-  const rawMeltValuePerCoinGBP = round(fineMetalOuncesPerCoin * silverSpotGBP, 2);
+  const rawMeltValuePerCoinGBP = round(fineMetalOuncesPerCoin * metalSpotGBP, 2);
+  const metalType =
+    partial.metalType ?? (purityDecimal > 0 ? "silver" : "none");
 
   return {
-    identifiedName: partial.identifiedName.trim() || "Unidentified silver coin",
-    metalType: purityDecimal > 0 ? "silver" : "none",
+    identifiedName: partial.identifiedName.trim() || "Unidentified coin",
+    metalType,
     purityDecimal,
     grossWeightGrams: round(grossWeightGrams, 4),
     fineMetalGramsPerCoin,

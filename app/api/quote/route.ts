@@ -5,7 +5,8 @@ import {
   EvaluatedCoinSchema,
   QuoteRequestSchema,
   TROY_OUNCE_GRAMS,
-  evaluateSilverLocally,
+  evaluateCoinLocally,
+  evaluateGoldLocally,
   finalizeEvaluatedCoin,
   type EvaluatedCoin,
 } from "@/lib/silver-quote";
@@ -16,15 +17,17 @@ const QUOTE_MODELS = [
   "gemini-flash-latest",
 ] as const;
 
-const SYSTEM_PROMPT = `You are a UK silver-coin valuation assistant for Timebound Treasures.
+const SYSTEM_PROMPT = `You are a UK coin valuation assistant for Timebound Treasures (gold and silver melt).
 Identify the coin from the customer's description and return structured fields only.
 
-You have Google Search. For any coin that is not a standard circulating UK/US silver type,
-SEARCH the web for official mint specs (metal, fineness, weight, ASW) before answering.
-Prefer Pobjoy Mint, Royal Mint, NGC, PCGS, or reputable dealer datasheets.
+You have Google Search. For any coin that is not a standard circulating UK/US type,
+SEARCH the web for official mint specs (metal, fineness, weight) before answering.
+Prefer Royal Mint, Pobjoy Mint, NGC, PCGS, or reputable dealer datasheets.
 
 Hard rules (obey exactly):
 - 1 Troy Ounce = ${TROY_OUNCE_GRAMS} grams.
+- UK full Sovereign = 7.988g at 0.9167 (22ct gold). Half = 3.994g. Quarter = 1.997g.
+- Krugerrand 1oz = 33.93g at 0.9167. Gold Britannia / Maple 1oz ≈ ${TROY_OUNCE_GRAMS}g at 0.9999.
 - UK silver purity by date:
   • Pre-1920 = 0.925 (sterling)
   • 1920–1946 inclusive = 0.50
@@ -39,11 +42,12 @@ Hard rules (obey exactly):
   • Crown = 28.28g
 - For modern 1oz silver bullion (Britannia, Maple, Eagle, etc.) use ${TROY_OUNCE_GRAMS}g at the stated fineness (usually 0.999 or 0.9999).
 - US 90% silver: Morgan/Peace dollar = 26.73g at 0.900; Walking Liberty half = 12.50g at 0.900.
-- Virenium, cupro-nickel, brass, and other non-precious mint alloys have purityDecimal 0 and metalType "none" (no silver melt).
+- Virenium, cupro-nickel, brass, and other non-precious mint alloys have purityDecimal 0 and metalType "none".
 - If a commemorative exists in both base-metal and silver proof versions, match the customer's metal wording. "Virenium" is not silver.
+- metalType must be "gold", "silver", or "none".
 - fineMetalGramsPerCoin = grossWeightGrams × purityDecimal
 - fineMetalOuncesPerCoin = fineMetalGramsPerCoin / ${TROY_OUNCE_GRAMS}
-- rawMeltValuePerCoinGBP = fineMetalOuncesPerCoin × the provided silver spot in GBP
+- rawMeltValuePerCoinGBP = fineMetalOuncesPerCoin × the matching metal spot in GBP (gold spot for gold, silver spot for silver)
 - Prefer conservative identification when uncertain; explain uncertainty and cite the source in notes.
 - Do not invent numismatic premiums in the melt fields — melt only.`;
 
@@ -53,42 +57,61 @@ export async function POST(request: Request) {
     const parsed = QuoteRequestSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "Invalid request. Provide userInput (string) and silverSpotGBP (number)." },
+        {
+          error:
+            "Invalid request. Provide userInput (string), silverSpotGBP (number), and optionally goldSpotGBP.",
+        },
         { status: 400 },
       );
     }
 
-    const { userInput, silverSpotGBP } = parsed.data;
+    const { userInput, silverSpotGBP, goldSpotGBP } = parsed.data;
 
-    if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-      const evaluated = evaluateSilverLocally(userInput, silverSpotGBP);
-      return NextResponse.json(evaluated);
+    // Known gold types (sovereign, Krugerrand, etc.) — never send through silver-only fallback.
+    if (goldSpotGBP && goldSpotGBP > 0) {
+      const gold = evaluateGoldLocally(userInput, goldSpotGBP);
+      if (gold) {
+        return NextResponse.json(gold);
+      }
     }
 
-    const prompt = `Silver spot price: £${silverSpotGBP.toFixed(4)} per troy ounce.
+    if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+      return NextResponse.json(
+        evaluateCoinLocally(userInput, { goldSpotGBP, silverSpotGBP }),
+      );
+    }
+
+    const prompt = `Gold spot price: £${(goldSpotGBP ?? 0).toFixed(4)} per troy ounce.
+Silver spot price: £${silverSpotGBP.toFixed(4)} per troy ounce.
 
 Customer description:
 ${userInput.trim()}
 
-Search if needed, then return the evaluated coin object. Recalculate fine metal and melt using the spot above.`;
+Search if needed, then return the evaluated coin object. Recalculate fine metal and melt using the matching spot above.`;
 
     try {
       const object = await generateWithSearch(prompt);
+      const spotForMetal =
+        object.metalType === "gold" && goldSpotGBP && goldSpotGBP > 0
+          ? goldSpotGBP
+          : silverSpotGBP;
       return NextResponse.json(
         finalizeEvaluatedCoin(
           {
             identifiedName: object.identifiedName,
+            metalType: object.metalType,
             purityDecimal: object.purityDecimal,
             grossWeightGrams: object.grossWeightGrams,
             notes: object.notes,
           },
-          silverSpotGBP,
+          spotForMetal,
         ),
       );
     } catch (aiError) {
-      console.warn("[api/quote] AI unavailable, using local silver rules", aiError);
-      const evaluated = evaluateSilverLocally(userInput, silverSpotGBP);
-      return NextResponse.json(evaluated);
+      console.warn("[api/quote] AI unavailable, using local coin rules", aiError);
+      return NextResponse.json(
+        evaluateCoinLocally(userInput, { goldSpotGBP, silverSpotGBP }),
+      );
     }
   } catch (error) {
     console.error("[api/quote]", error);
@@ -112,7 +135,7 @@ async function generateWithSearch(prompt: string): Promise<EvaluatedCoin> {
         output: Output.object({
           schema: EvaluatedCoinSchema,
           name: "EvaluatedCoin",
-          description: "Silver coin identification and melt valuation fields",
+          description: "Coin identification and melt valuation fields",
         }),
         system: SYSTEM_PROMPT,
         prompt,
